@@ -1,0 +1,84 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use autodie;
+
+use Getopt::Long;
+
+my $build_dir = ".build/debian-build";
+
+my ($wrap_and_sort, $wrap_and_sort_always, $clean_backup_files);
+Getopt::Long::Configure(qw(auto_help));
+GetOptions(
+    'wrap-and-sort|w'        => \$wrap_and_sort,
+    'wrap-and-sort-always|a' => \$wrap_and_sort_always,
+    'clean-backup-files'     => \$clean_backup_files,
+    ) or die("Couldn't understand command line arguments, use --help to see available options \n");
+
+die 'No dist.ini found in current directory. Bailing out'
+    unless -r 'dist.ini';
+
+system(qw(dzil build --in), $build_dir);
+system(qw(cp -pr debian), $build_dir);
+chdir($build_dir);
+system(qw(dh-make-perl refresh));
+system("cp -pr debian/* ../../debian/");
+chdir('../..');
+system(qw(dzil clean));
+
+
+if ($wrap_and_sort_always) {
+    system(qw(wrap-and-sort -a));
+} elsif ($wrap_and_sort) {
+    system('wrap-and-sort');
+}
+
+if ($clean_backup_files) {
+    system('rm -f debian/*.bak');
+}
+
+=head1 NAME
+
+dh-dzil-refresh - runs "dh-make-perl refresh" in dzil's build directory
+
+=head1 SYNOPSIS
+
+  dh-dzil-refresh
+  dh-dzil-refresh [-w|--wrap-and-sort] [-c|--clean-backup-files]
+  dh-dzil-refresh [-a|--wrap-and-sort-always] [-c|--clean-backup-files]
+  dh-dzil-refresh [-h|--help]
+
+=head1 OPTIONS
+
+=over 4
+
+=item C<-w>, C<--wrap-and-sort>
+
+Run C<wrap-and-sort> after C<dh-make-perl refresh>.
+
+=item C<-a>, C<--wrap-and-sort-always>
+
+Run C<wrap-and-sort -a> after C<dh-make-perl refresh>.
+
+=item C<-c>, C<--clean-backup-files>
+
+Clean up C<*.bak> backup files created by C<dh-make-perl refresh>.
+
+=back
+
+=head1 COMMAND SPELLING
+
+In comparison to L<dh_dzil_build> and L<dh_dzil_clean>, the command
+name is spelled with dash instead of underscores as it's not a
+debhelper plugin and only those should start with "dh_". The only
+exemption is C<dh_make> -- for historical reasons. Note that even
+C<dh-make-perl> is spelled with dashes.
+
+=head1 SEE ALSO
+
+L<debhelper(7)>, L<dh-dist-zilla(7)>, L<dh-make-perl(1)>, L<wrap-and-sort(1)>
+
+=head1 AUTHOR
+
+Elmar Heeb <elmar@heebs.ch> and Axel Beckert <abe@debian.org>

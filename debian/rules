@@ -2,3 +2,16 @@
 
 %:
 	dh $@
+
+override_dh_auto_build:
+	debian/generate_manpages.pl
+
+override_dh_auto_test:
+# "ifeq" can be removed again once we switch to debhelper-compat=13.
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS) $(DEB_BUILD_PROFILES)))
+	prove -v t
+endif
+
+perlcritic:
+	fgrep -r '#!/usr/bin/''perl' -l . | xargs perlcritic -3
+	find . -name '*.pm' | xargs perlcritic -3
